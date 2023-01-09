@@ -70,7 +70,7 @@ class WifiManager:
                 # Ignore connecting status for now.. ESP32 is a bit strange
                 # if status != network.STAT_CONNECTING: <- do not care yet
                 cls.setup_network()
-            await asyncio.sleep(5)  # Pause 5 seconds
+            await asyncio.sleep(10)  # Pause 5 seconds
 
     @classmethod
     def wlan(cls):
@@ -100,6 +100,7 @@ class WifiManager:
             log.info("Creating config file")
             with open(cls.config_file, "w") as f:
                 json.dump(cls.default_config, f)
+                config = cls.default_config
         except Exception as e:
             log.error("Failed to load config file")
             cls.preferred_networks = []
@@ -162,17 +163,19 @@ class WifiManager:
         for check in range(0, 10):  # Wait a maximum of 10 times (10 * 500ms = 5 seconds) for success
             if cls.wlan().isconnected():
                 log.info("SSID %s connected" % ssid)
+                print(cls.wlan().ifconfig())
                 return True
             time.sleep_ms(500)
         return False
 
     @classmethod
     def save_network(cls, ssid, password):
-        # try:
+        try:
             with open(cls.config_file, "r") as f:
                 config = json.load(f)
-            known = [network['ssid'] for network in config["known_networks"]]
-            if ssid in known:
+            known_ssid = [network['ssid'] for network in config["known_networks"]]
+            known = [network for network in config["known_networks"]]
+            if ssid in known_ssid:
                 log.warning('SSID already set up, overwriting...')
                 known = [network for network in config["known_networks"] if network['ssid'] != ssid]
             new = {'ssid': ssid, 'password': password}
@@ -180,6 +183,6 @@ class WifiManager:
             log.info('Saving wifi network with SSID: %s' % ssid)
             with open(cls.config_file, "w") as f:
                 json.dump(config, f)
-        # except Exception as e:
-        #     print(e)
-        #     log.error("Could not save new ssid")
+        except Exception as e:
+            print(e)
+            log.error("Could not save new ssid")
